@@ -23,12 +23,12 @@ abstract class Stripe_ApiResource extends Stripe_Object
   {
     // Useful for namespaces: Foo\Stripe_Charge
     if ($postfix = strrchr($class, '\\'))
-      $class = substr($postfix, 1);
-    if (substr($class, 0, strlen('Stripe')) == 'Stripe')
-      $class = substr($class, strlen('Stripe'));
+      $class = Tools::substr($postfix, 1);  /* PrestaShop */
+    if (Tools::substr($class, 0, Tools::strlen('Stripe')) == 'Stripe')
+      $class = Tools::substr($class, Tools::strlen('Stripe'));
     $class = str_replace('_', '', $class);
     $name = urlencode($class);
-    $name = strtolower($name);
+    $name = Tools::strtolower($name);
     return $name;
   }
 

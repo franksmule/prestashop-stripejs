@@ -36,12 +36,12 @@ if (!defined('_PS_VERSION_'))
 $stripe = new StripeJs();
 if ($stripe->active)
 {
-	if (isset($_GET['token']) && Configuration::get('STRIPE_WEBHOOK_TOKEN') == $_GET['token'])
+	if (Tools::getIsset('token') && Configuration::get('STRIPE_WEBHOOK_TOKEN') == Tools::getValue('token'))
 	{
 		include(dirname(__FILE__).'/lib/Stripe.php');
 		Stripe::setApiKey(Configuration::get('STRIPE_MODE') ? Configuration::get('STRIPE_PRIVATE_KEY_LIVE') : Configuration::get('STRIPE_PRIVATE_KEY_TEST'));
 
-		$event_json = json_decode(@file_get_contents('php://input'));
+		$event_json = Tools::jsonDecode(@Tools::file_get_contents('php://input'));
 		if (isset($event_json->id))
 		{
 			/* In case there is an issue with the event, Stripe throw an exception, just ignore it. */
@@ -67,7 +67,7 @@ if ($stripe->active)
 								}
 
 							$message = new Message();
-							$message->message = $this->l('A chargeback occured on this order and was reported by Stripe on').' '.date('Y-m-d H:i:s');
+							$message->message = $stripe->l('A chargeback occured on this order and was reported by Stripe on').' '.date('Y-m-d H:i:s');
 							$message->id_order = (int)$order->id;
 							$message->id_employee = 1;
 							$message->private = 1;

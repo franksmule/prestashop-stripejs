@@ -25,17 +25,17 @@ if (!defined('_PS_VERSION_'))
 
 class StripeJs extends PaymentModule
 {
-	public $limited_countries = array('us', 'ca', 'gb');
-	public $limited_currencies = array('USD', 'CAD', 'GBP', 'EUR');
 	protected $backward = false;
 
 	public function __construct()
 	{
 		$this->name = 'stripejs';
 		$this->tab = 'payments_gateways';
-		$this->version = '0.9.8';
-		$this->author = 'PrestaShop + Ollie';
+		$this->version = '0.9.9';
+		$this->author = 'PrestaShop + Ollie McFarlane';
 		$this->need_instance = 0;
+		$this->currencies = true;
+		$this->currencies_mode = 'checkbox';
 
 		parent::__construct();
 
@@ -162,15 +162,12 @@ class StripeJs extends PaymentModule
 		if (!$this->backward)
 			return;
 
-		if (!in_array($this->context->currency->iso_code, $this->limited_currencies))
-			return;
-
 		/* Continue only if we are in the checkout process */
 		if (Tools::getValue('controller') != 'order-opc' && (!($_SERVER['PHP_SELF'] == __PS_BASE_URI__.'order.php' || $_SERVER['PHP_SELF'] == __PS_BASE_URI__.'order-opc.php' || Tools::getValue('controller') == 'order' || Tools::getValue('controller') == 'orderopc' || Tools::getValue('step') == 3)))
 			return;
 
 		/* Load JS and CSS files through CCC */
-		$this->context->controller->addCSS($this->_path.'stripe-prestashop.css');
+		$this->context->controller->addCSS($this->_path.'css/stripe-prestashop.css');
 
 		return '
 		<script type="text/javascript" src="https://js.stripe.com/v1/"></script>
@@ -189,10 +186,6 @@ class StripeJs extends PaymentModule
 		/* If 1.4 and no backward then leave */
 		if (!$this->backward)
 			return;
-
-		/* If the currency is not supported, then leave */
-		if (!in_array($this->context->currency->iso_code, $this->limited_currencies))
-			return ;
 
 		/* If the merchant has enabled the option to store credit cards, retrieve the most recent one for this customer */
 		if (Configuration::get('STRIPE_SAVE_TOKENS'))
@@ -218,11 +211,17 @@ class StripeJs extends PaymentModule
 			}
 		}
 		
+		if (!empty($this->context->cookie->stripe_error)) {
+			$this->smarty->assign('stripe_error', $this->context->cookie->stripe_error);
+			$this->context->cookie->__set('stripe_error', null);
+		}
+
+
 		$this->smarty->assign('stripe_ps_version', _PS_VERSION_);
 
 		return '
 		<script type="text/javascript">'.
-			((isset($billing_address) && Validate::isLoadedObject($billing_address)) ? 'var stripe_billing_address = '.json_encode($billing_address).';' : '').'
+			((isset($billing_address) && Validate::isLoadedObject($billing_address)) ? 'var stripe_billing_address = '. Tools::jsonEncode($billing_address).';' : '').'
 			var stripe_secure_key = \''.addslashes($this->context->customer->secure_key).'\';
 		</script>'.$this->display(__FILE__, 'payment.tpl');
 	}
@@ -240,36 +239,36 @@ class StripeJs extends PaymentModule
 			return;
 
 		/* Continue only if we are on the order's details page (Back-office) */
-		if (!isset($_GET['vieworder']) || !isset($_GET['id_order']))
+		if (!Tools::getIsset('vieworder') || !Tools::getIsset('id_order'))
 			return;
 
 		/* If the "Refund" button has been clicked, check if we can perform a partial or full refund on this order */
-		if (Tools::isSubmit('SubmitStripeRefund') && isset($_POST['stripe_amount_to_refund']) && isset($_POST['id_transaction_stripe']))
+		if (Tools::isSubmit('SubmitStripeRefund') && Tools::getIsset('stripe_amount_to_refund') && Tools::getIsset('id_transaction_stripe'))
 		{
 			/* Get transaction details and make sure the token is valid */
-			$stripe_transaction_details = Db::getInstance()->getRow('SELECT * FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)$_GET['id_order'].' AND type = \'payment\' AND status = \'paid\'');
-			if (isset($stripe_transaction_details['id_transaction']) && $stripe_transaction_details['id_transaction'] === $_POST['id_transaction_stripe'])
+			$stripe_transaction_details = Db::getInstance()->getRow('SELECT * FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)Tools::getValue('id_order').' AND type = \'payment\' AND status = \'paid\'');
+			if (isset($stripe_transaction_details['id_transaction']) && $stripe_transaction_details['id_transaction'] === Tools::getValue('id_transaction_stripe'))
 			{
 				/* Check how much has been refunded already on this order */
-				$stripe_refunded = Db::getInstance()->getValue('SELECT SUM(amount) FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)$_GET['id_order'].' AND type = \'refund\' AND status = \'paid\'');
-				if ($_POST['stripe_amount_to_refund'] <= number_format($stripe_transaction_details['amount'] - $stripe_refunded, 2, '.', ''))
-					$this->processRefund($_POST['id_transaction_stripe'], (float)$_POST['stripe_amount_to_refund'], $stripe_transaction_details);
+				$stripe_refunded = Db::getInstance()->getValue('SELECT SUM(amount) FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)Tools::getValue('id_order').' AND type = \'refund\' AND status = \'paid\'');
+				if (Tools::getValue('stripe_amount_to_refund') <= number_format($stripe_transaction_details['amount'] - $stripe_refunded, 2, '.', ''))
+					$this->processRefund(Tools::getValue('id_transaction_stripe'), (float)Tools::getValue('stripe_amount_to_refund'), $stripe_transaction_details);
 				else
 					$this->_errors['stripe_refund_error'] = $this->l('You cannot refund more than').' '.Tools::displayPrice($stripe_transaction_details['amount'] - $stripe_refunded).' '.$this->l('on this order');
 			}
 		}
 
 		/* Check if the order was paid with Stripe and display the transaction details */
-		if (Db::getInstance()->getValue('SELECT module FROM '._DB_PREFIX_.'orders WHERE id_order = '.(int)$_GET['id_order']) == $this->name)
+		if (Db::getInstance()->getValue('SELECT module FROM '._DB_PREFIX_.'orders WHERE id_order = '.(int)Tools::getValue('id_order')) == $this->name)
 		{
 			/* Get the transaction details */
-			$stripe_transaction_details = Db::getInstance()->getRow('SELECT * FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)$_GET['id_order'].' AND type = \'payment\' AND status = \'paid\'');
+			$stripe_transaction_details = Db::getInstance()->getRow('SELECT * FROM '._DB_PREFIX_.'stripe_transaction WHERE id_order = '.(int)Tools::getValue('id_order').' AND type = \'payment\' AND status = \'paid\'');
 
 			/* Get all the refunds previously made (to build a list and determine if another refund is still possible) */
 			$stripe_refunded = 0;
 			$output_refund = '';
 			$stripe_refund_details = Db::getInstance()->ExecuteS('SELECT amount, status, date_add FROM '._DB_PREFIX_.'stripe_transaction
-			WHERE id_order = '.(int)$_GET['id_order'].' AND type = \'refund\' ORDER BY date_add DESC');
+			WHERE id_order = '.(int)Tools::getValue('id_order').' AND type = \'refund\' ORDER BY date_add DESC');
 			foreach ($stripe_refund_details as $stripe_refund_detail)
 			{
 				$stripe_refunded += ($stripe_refund_detail['status'] == 'paid' ? $stripe_refund_detail['amount'] : 0);
@@ -296,7 +295,7 @@ class StripeJs extends PaymentModule
 				$output .= '<b style="color: #CC0000;">'.$this->l('Warning:').'</b> '.$this->l('The customer paid using Stripe and an error occured (check details at the bottom of this page)');
 
 			$output .= '</fieldset><br /><fieldset'.(_PS_VERSION_ < 1.5 ? ' style="width: 400px;"' : '').'><legend><img src="../img/admin/money.gif" alt="" />'.$this->l('Proceed to a full or partial refund via Stripe').'</legend>'.
-			((empty($this->_errors['stripe_refund_error']) && isset($_POST['id_transaction_stripe'])) ? '<div class="conf confirmation">'.$this->l('Your refund was successfully processed').'</div>' : '').
+			((empty($this->_errors['stripe_refund_error']) &&  Tools::getIsset('id_transaction_stripe')) ? '<div class="conf confirmation">'.$this->l('Your refund was successfully processed').'</div>' : '').
 			(!empty($this->_errors['stripe_refund_error']) ? '<span style="color: #CC0000; font-weight: bold;">'.$this->l('Error:').' '.Tools::safeOutput($this->_errors['stripe_refund_error']).'</span><br /><br />' : '').
 			$this->l('Already refunded:').' <b>'.Tools::displayPrice($stripe_refunded).'</b><br /><br />'.($stripe_refunded ? '<table class="table" cellpadding="0" cellspacing="0" style="font-size: 12px;"><tr><th>'.$this->l('Date').'</th><th>'.$this->l('Amount refunded').'</th><th>'.$this->l('Status').'</th></tr>'.$output_refund.'</table><br />' : '').
 			($stripe_transaction_details['amount'] > $stripe_refunded ? '<form action="" method="post">'.$this->l('Refund:').' $ <input type="text" value="'.number_format($stripe_transaction_details['amount'] - $stripe_refunded, 2, '.', '').
@@ -330,7 +329,7 @@ class StripeJs extends PaymentModule
 		try
 		{
 			$charge = Stripe_Charge::retrieve($id_transaction_stripe);
-			$result_json = json_decode($charge->refund(array('amount' => $amount * 100)));
+			$result_json = Tools::jsonDecode($charge->refund(array('amount' => $amount * 100)));
 		}
 		catch (Exception $e)
 		{
@@ -366,11 +365,11 @@ class StripeJs extends PaymentModule
 			// added this so we could present a better/meaningful message to the customer when the charge suceeds, but verifications have failed.
 			$pendingOrderStatus = (int)Configuration::get('STRIPE_PENDING_ORDER_STATUS');
 			$currentOrderStatus = (int)$params['objOrder']->getCurrentState();
-			if ($pendingOrderStatus==$currentOrderStatus) {
+
+			if ($pendingOrderStatus==$currentOrderStatus)
 				$this->smarty->assign('order_pending', true);
-			} else {
+			else
 				$this->smarty->assign('order_pending', false);
-			}
 
 		return $this->display(__FILE__, 'order-confirmation.tpl');
 
@@ -393,7 +392,7 @@ class StripeJs extends PaymentModule
 		/* Case 1: Charge an existing customer (or create it and charge it) */
 		/* Case 2: Just process the transaction, do not save Stripe customer's details */
 		if ((Configuration::get('STRIPE_SAVE_TOKENS') && !Configuration::get('STRIPE_SAVE_TOKENS_ASK')) ||
-		(Configuration::get('STRIPE_SAVE_TOKENS') && Configuration::get('STRIPE_SAVE_TOKENS_ASK') && isset($_POST['stripe_save_token']) && $_POST['stripe_save_token']))
+		(Configuration::get('STRIPE_SAVE_TOKENS') && Configuration::get('STRIPE_SAVE_TOKENS_ASK') &&  Tools::getIsset('stripe_save_token') && Tools::getValue('stripe_save_token')))
 		{
 			/* Get or Create a Stripe Customer */
 			$stripe_customer = Db::getInstance()->getRow('
@@ -454,29 +453,29 @@ class StripeJs extends PaymentModule
 			else
 				$charge_details['card'] = $token;
 
-			$result_json = json_decode(Stripe_Charge::create($charge_details));
+			$result_json = Tools::jsonDecode(Stripe_Charge::create($charge_details));
 
 			/* Save the Customer ID in PrestaShop to re-use it later */
 			if (isset($stripe_customer_exists) && !$stripe_customer_exists)
 				Db::getInstance()->Execute('
 				INSERT INTO '._DB_PREFIX_.'stripe_customer (id_stripe_customer, stripe_customer_id, token, id_customer, cc_last_digits, date_add)
-				VALUES (NULL, \''.pSQL($stripe_customer['stripe_customer_id']).'\', \''.pSQL($token).'\', '.(int)$this->context->cookie->id_customer.', '.(int)substr(Tools::getValue('StripLastDigits'), 0, 4).', NOW())');
+				VALUES (NULL, \''.pSQL($stripe_customer['stripe_customer_id']).'\', \''.pSQL($token).'\', '.(int)$this->context->cookie->id_customer.', '.(int)Tools::substr(Tools::getValue('StripLastDigits'), 0, 4).', NOW())');
 
 		// catch the stripe error the correct way.
 		} catch(Stripe_CardError $e) {
 			$body = $e->getJsonBody(); 
 			$err = $body['error']; 
 
-			$type = $err['type']; 
+			//$type = $err['type']; 
 			$message = $err['message']; 
-			$code = $err['code']; 
-			$charge = $err['charge']; 
+			//$code = $err['code']; 
+			//$charge = $err['charge']; 
 
 			if (class_exists('Logger'))
 				Logger::addLog($this->l('Stripe - Payment transaction failed').' '.$message, 1, null, 'Cart', (int)$this->context->cart->id, true);
-
+			$this->context->cookie->__set("stripe_error", 'There was a problem with your payment');
 			$controller = Configuration::get('PS_ORDER_PROCESS_TYPE') ? 'order-opc.php' : 'order.php';
-			$location=$this->context->link->getPageLink($controller).(strpos($controller, '?') !== false ? '&' : '?').'step=3&stripe_error='.base64_encode("There was a problem with your payment").'#stripe_error';
+			$location = $this->context->link->getPageLink($controller).(strpos($controller, '?') !== false ? '&' : '?').'step=3#stripe_error';
 			header('Location: '.$location);
 			exit;
 
@@ -488,8 +487,9 @@ class StripeJs extends PaymentModule
 			/* If it's not a critical error, display the payment form again */
 			if ($e->getCode() != 'card_declined')
 			{
+				$this->context->cookie->__set("stripe_error",$e->getMessage());
 				$controller = Configuration::get('PS_ORDER_PROCESS_TYPE') ? 'order-opc.php' : 'order.php';
-				header('Location: '.$this->context->link->getPageLink($controller).(strpos($controller, '?') !== false ? '&' : '?').'step=3&stripe_error='.base64_encode($e->getMessage()).'#stripe_error');
+				header('Location: '.$this->context->link->getPageLink($controller).(strpos($controller, '?') !== false ? '&' : '?').'step=3#stripe_error');
 				exit;
 			}
 		}
@@ -497,13 +497,16 @@ class StripeJs extends PaymentModule
 		/* Log Transaction details */
 		if (!isset($message))
 		{
+			if (!isset($result_json->fee))
+				$result_json->fee = 0;
+
 			$order_status = (int)Configuration::get('STRIPE_PAYMENT_ORDER_STATUS');
 			$message = $this->l('Stripe Transaction Details:')."\n\n".
 			$this->l('Stripe Transaction ID:').' '.$result_json->id."\n".
 			$this->l('Amount:').' '.($result_json->amount * 0.01)."\n".
 			$this->l('Status:').' '.($result_json->paid == 'true' ? $this->l('Paid') : $this->l('Unpaid'))."\n".
 			$this->l('Processed on:').' '.strftime('%Y-%m-%d %H:%M:%S', $result_json->created)."\n".
-			$this->l('Currency:').' '.strtoupper($result_json->currency)."\n".
+			$this->l('Currency:').' '. Tools::strtoupper($result_json->currency)."\n".
 			$this->l('Credit card:').' '.$result_json->card->type.' ('.$this->l('Exp.:').' '.$result_json->card->exp_month.'/'.$result_json->card->exp_year.')'."\n".
 			$this->l('Last 4 digits:').' '.sprintf('%04d', $result_json->card->last4).' ('.$this->l('CVC Check:').' '.($result_json->card->cvc_check == 'pass' ? $this->l('OK') : $this->l('NOT OK')).')'."\n".
 			$this->l('Processing Fee:').' '.($result_json->fee * 0.01)."\n".
@@ -602,10 +605,9 @@ class StripeJs extends PaymentModule
 	public function checkRequirements()
 	{
 		$tests = array('result' => true);
-		$tests['curl'] = array('name' => $this->l('PHP cURL extension must be enabled on your server'), 'result' => is_callable('curl_exec'));
+		$tests['curl'] = array('name' => $this->l('PHP cURL extension must be enabled on your server'), 'result' => extension_loaded('curl'));
 		if (Configuration::get('STRIPE_MODE'))
-			$tests['ssl'] = array('name' => $this->l('SSL must be enabled on your store (before entering Live mode)'), 'result' => Configuration::get('PS_SSL_ENABLED') || (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) != 'off'));
-		$tests['currencies'] = array('name' => $this->l('The currency USD, EUR, GBP or CAD must be enabled on your store'), 'result' => Currency::exists('GBP', 0) || Currency::exists('EUR', 0) || Currency::exists('USD', 0) || Currency::exists('CAD', 0));
+			$tests['ssl'] = array('name' => $this->l('SSL must be enabled on your store (before entering Live mode)'), 'result' => Configuration::get('PS_SSL_ENABLED') || (!empty($_SERVER['HTTPS']) && Tools::strtolower($_SERVER['HTTPS']) != 'off'));
 		$tests['php52'] = array('name' => $this->l('Your server must run PHP 5.2 or greater'), 'result' => version_compare(PHP_VERSION, '5.2.0', '>='));
 		$tests['configuration'] = array('name' => $this->l('You must sign-up for Stripe and configure your account settings in the module (publishable key, secret key...etc.)'), 'result' => $this->checkSettings());
 
@@ -632,7 +634,7 @@ class StripeJs extends PaymentModule
 	public function getContent()
 	{
 		$output = '';
-		if (version_compare(_PS_VERSION_,'1.5','>'))
+		if (version_compare(_PS_VERSION_, '1.5', '>'))
 			$this->context->controller->addJQueryPlugin('fancybox');
 		else
 			$output .= '
@@ -642,11 +644,11 @@ class StripeJs extends PaymentModule
 		/* Update Configuration Values when settings are updated */
 		if (Tools::isSubmit('SubmitStripe'))
 		{
-			$configuration_values = array('STRIPE_MODE' => $_POST['stripe_mode'], 'STRIPE_SAVE_TOKENS' => $_POST['stripe_save_tokens'],
-			'STRIPE_SAVE_TOKENS_ASK' => $_POST['stripe_save_tokens_ask'], 'STRIPE_PUBLIC_KEY_TEST' => $_POST['stripe_public_key_test'],
-			'STRIPE_PUBLIC_KEY_LIVE' => $_POST['stripe_public_key_live'], 'STRIPE_PRIVATE_KEY_TEST' => $_POST['stripe_private_key_test'],
-			'STRIPE_PRIVATE_KEY_LIVE' => $_POST['stripe_private_key_live'], 'STRIPE_PENDING_ORDER_STATUS' => (int)$_POST['stripe_pending_status'],
-			'STRIPE_PAYMENT_ORDER_STATUS' => (int)$_POST['stripe_payment_status'], 'STRIPE_CHARGEBACKS_ORDER_STATUS' => (int)$_POST['stripe_chargebacks_status']);
+			$configuration_values = array('STRIPE_MODE' => Tools::getValue('stripe_mode'), 'STRIPE_SAVE_TOKENS' =>Tools::getValue('stripe_save_tokens'),
+			'STRIPE_SAVE_TOKENS_ASK' =>Tools::getValue('stripe_save_tokens_ask'), 'STRIPE_PUBLIC_KEY_TEST' => Tools::getValue('stripe_public_key_test'),
+			'STRIPE_PUBLIC_KEY_LIVE' => Tools::getValue('stripe_public_key_live'), 'STRIPE_PRIVATE_KEY_TEST' => Tools::getValue('stripe_private_key_test'),
+			'STRIPE_PRIVATE_KEY_LIVE' => Tools::getValue('stripe_private_key_live'), 'STRIPE_PENDING_ORDER_STATUS' => (int)Tools::getValue('stripe_pending_status'),
+			'STRIPE_PAYMENT_ORDER_STATUS' => (int)Tools::getValue('stripe_payment_status'), 'STRIPE_CHARGEBACKS_ORDER_STATUS' => (int)Tools::getValue('stripe_chargebacks_status'));
 
 			foreach ($configuration_values as $configuration_key => $configuration_value)
 				Configuration::updateValue($configuration_key, $configuration_value);
@@ -664,7 +666,7 @@ class StripeJs extends PaymentModule
 			    return false;
 			});
 		</script>
-		<link href="'.$this->_path.'stripe-prestashop-admin.css" rel="stylesheet" type="text/css" media="all" />
+		<link href="'.$this->_path.'css/stripe-prestashop-admin.css" rel="stylesheet" type="text/css" media="all" />
 		<div class="stripe-module-wrapper">
 			'.(Tools::isSubmit('SubmitStripe') ? '<div class="conf confirmation">'.$this->l('Settings successfully saved').'<img src="http://www.prestashop.com/modules/'.$this->name.'.png?api_user='.urlencode($_SERVER['HTTP_HOST']).'" style="display: none;" /></div>' : '').'
 			<div class="stripe-module-header">

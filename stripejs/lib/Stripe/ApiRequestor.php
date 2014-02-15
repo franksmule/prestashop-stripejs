@@ -127,7 +127,7 @@ class Stripe_ApiRequestor
   private function _interpretResponse($rbody, $rcode)
   {
     try {
-      $resp = json_decode($rbody, true);
+      $resp = Tools::jsonDecode($rbody, true); /* PrestaShop */
     } catch (Exception $e) {
       throw new Stripe_ApiError("Invalid response body from API: $rbody (HTTP response code was $rcode)", $rcode, $rbody);
     }
@@ -141,7 +141,7 @@ class Stripe_ApiRequestor
   private function _curlRequest($meth, $absUrl, $headers, $params)
   {
     $curl = curl_init();
-    $meth = strtolower($meth);
+    $meth = Tools::strtolower($meth); /* PrestaShop */
     $opts = array();
     if ($meth == 'get') {
       $opts[CURLOPT_HTTPGET] = 1;

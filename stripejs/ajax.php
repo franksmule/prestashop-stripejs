@@ -32,18 +32,21 @@ include(dirname(__FILE__).'/stripejs.php');
 if (!defined('_PS_VERSION_'))
 	exit;
 
-$customer = new Customer((int)$cookie->id_customer);
+$context = Context::getContext();
+
+$stripe = new StripeJs();
+$customer = new Customer((int)$context->cookie->id_customer);
 if (!Validate::isLoadedObject($customer))
 	die('0');
 
-if (!isset($_POST['token']) || $_POST['token'] != $customer->secure_key)
+if (!Tools::getIsset('token') || Tools::getValue('token') != $customer->secure_key)
 	die('0');
 
 /* Check that the module is active and that we have the token */
 $stripe = new StripeJs();
-if ($stripe->active && isset($_POST['action']))
+if ($stripe->active && Tools::getIsset($_POST['action']))
 {
-	switch ($_POST['action'])
+	switch (Tools::getValue('action'))
 	{
 		case 'delete_card':
 			echo (int)$stripe->deleteCreditCard();

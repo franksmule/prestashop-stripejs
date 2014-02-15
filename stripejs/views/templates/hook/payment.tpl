@@ -24,12 +24,12 @@
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
-<script type="text/javascript" src="{$module_dir}stripe-prestashop.js"></script>
+<script type="text/javascript" src="{$module_dir|escape:htmlall:'UTF-8'}js/stripe-prestashop.js"></script>
 <div class="payment_module"{if $stripe_ps_version < '1.5'}style="border: 1px solid #595A5E; padding: 0.6em; margin-left: 0.7em;"{/if}>
-	<h3 class="stripe_title"><img alt="" src="{$module_dir}img/secure-icon.png" />{l s='Pay by credit card with our secured payment server' mod='stripejs'}</h3>
+	<h3 class="stripe_title"><img alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/secure-icon.png" />{l s='Pay by credit card with our secured payment server' mod='stripejs'}</h3>
 	{* This form will be displayed only if a previous credit card was saved *}
 	{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)}
-	<form action="{$module_dir}validation.php" method="POST" id="stripe-payment-form-cc">
+	<form action="{$module_dir|escape:htmlall:'UTF-8'}validation.php" method="POST" id="stripe-payment-form-cc">
 		<p>{l s='Pay with my saved Credit card (ending in' mod='stripejs'} {$stripe_credit_card|escape:html:'UTF-8'}{l s=')' mod='stripejs'}
 		<input type="hidden" name="stripe_save_token" value="1" />
 		<input type="hidden" name="stripeToken" value="0" />
@@ -38,21 +38,23 @@
 	</form>
 	{/if}
 	{* Classic Credit card form *}
-	<div id="stripe-ajax-loader"><img src="{$module_dir}img/ajax-loader.gif" alt="" /> {l s='Transaction in progress, please wait.' mod='stripejs'}</div>
-	<form action="{$module_dir}validation.php" method="POST" id="stripe-payment-form"{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)} style="display: none;"{/if}>
-		<div class="stripe-payment-errors">{if isset($smarty.get.stripe_error)}{$smarty.get.stripe_error|base64_decode|escape:html:'UTF-8'}{/if}</div><a name="stripe_error" style="display:none"></a>
+	<div id="stripe-ajax-loader"><img src="{$module_dir|escape:htmlall:'UTF-8'}img/ajax-loader.gif" alt="" /> {l s='Transaction in progress, please wait.' mod='stripejs'}</div>
+	<form action="{$module_dir|escape:htmlall:'UTF-8'}validation.php" method="POST" id="stripe-payment-form"{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)} style="display: none;"{/if}>
+		<div class="stripe-payment-errors">{if isset($stripe_error)}{$stripe_error|escape:htmlall:'UTF-8'}{/if}</div>
+
+			<a name="stripe_error" style="display:none"></a>
 		<div class="stripe-card-deleted"></div>
 		<label>{l s='Card Number' mod='stripejs'}</label><br />
 		<input type="text" size="20" autocomplete="off" class="stripe-card-number" />
 		<br />
 		<div class="block-left">
 			<label>{l s='Card Type' mod='stripejs'}</label><br />
-			<img class="cc-icon disable" rel="Visa" alt="" src="{$module_dir}img/cc-visa.png" />
-			<img class="cc-icon disable" rel="MasterCard" alt="" src="{$module_dir}img/cc-mastercard.png" />
-			<img class="cc-icon disable" rel="Discover" alt="" src="{$module_dir}img/cc-discover.png" />
-			<img class="cc-icon disable" rel="American Express" alt="" src="{$module_dir}img/cc-amex.png" />
-			<img class="cc-icon disable" rel="JCB" alt="" src="{$module_dir}img/cc-jcb.png" />
-			<img class="cc-icon disable" rel="Diners Club" alt="" src="{$module_dir}img/cc-diners.png" />
+			<img class="cc-icon disable" rel="Visa" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-visa.png" />
+			<img class="cc-icon disable" rel="MasterCard" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-mastercard.png" />
+			<img class="cc-icon disable" rel="Discover" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-discover.png" />
+			<img class="cc-icon disable" rel="American Express" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-amex.png" />
+			<img class="cc-icon disable" rel="JCB" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-jcb.png" />
+			<img class="cc-icon disable" rel="Diners Club" alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/cc-diners.png" />
 		</div>
 		<div class="block-left">
 			<label>{l s='CVC' mod='stripejs'}</label><br />
