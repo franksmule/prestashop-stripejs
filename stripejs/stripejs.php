@@ -46,7 +46,7 @@ class StripeJs extends PaymentModule
 		/* Backward compatibility */
 		if (_PS_VERSION_ < '1.5')
 		{
-			$this->backward_error = $this->l('In order to work properly in PrestaShop v1.4, the Stripe module requiers the backward compatibility module at least v0.3.').'<br />'.
+			$this->backward_error = $this->l('In order to work properly in PrestaShop v1.4, the Stripe module requires the backward compatibility module at least v0.3.').'<br />'.
 				$this->l('You can download this module for free here: http://addons.prestashop.com/en/modules-prestashop/6222-backwardcompatibility.html');
 			if (file_exists(_PS_MODULE_DIR_.'backwardcompatibility/backward_compatibility/backward.php'))
 			{
