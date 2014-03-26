@@ -223,7 +223,7 @@ class StripeJs extends PaymentModule
 		<script type="text/javascript">'.
 			((isset($billing_address) && Validate::isLoadedObject($billing_address)) ? 'var stripe_billing_address = '. Tools::jsonEncode($billing_address).';' : '').'
 			var stripe_secure_key = \''.addslashes($this->context->customer->secure_key).'\';
-		</script>'.$this->display(__FILE__, 'payment.tpl');
+		</script>'.$this->display(__FILE__, './views/templates/hook/payment.tpl');
 	}
 
 	/**

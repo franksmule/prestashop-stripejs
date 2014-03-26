@@ -32,9 +32,10 @@ include(dirname(__FILE__).'/stripejs.php');
 if (!defined('_PS_VERSION_'))
 	exit;
 
-$context = Context::getContext();
+
 /* Check that the Stripe's module is active and that we have the token */
 $stripe = new StripeJs();
+$context = Context::getContext();
 if ($stripe->active && Tools::getIsset('stripeToken')) {
  	$stripe->processPayment(Tools::getValue('stripeToken'));
 }
