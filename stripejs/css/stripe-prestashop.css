@@ -26,10 +26,10 @@ a.stripe-card-cvc-info div.cvc-info {
 }
 a.stripe-card-cvc-info:hover div.cvc-info { display: block; }
 div.cvc-info:hover { cursor: default; }
-#stripe-payment-form img.cc-icon { border: #CCCCCC solid 1px; float: left; margin-right: 5px; }
+#stripe-payment-form img.cc-icon { border: #CCCCCC solid 1px; margin-right: 5px;  }
 .block-left { display: inline-block; float: left; margin-right: 20px; }
-img.disable { opacity: 0.3; }
-img.enable { opacity: 1; }
+img.disable { opacity: 0.3; display: none; }
+img.enable { opacity: 1;  display: inline-block;}
 #stripe-payment-form-cc .stripe-submit-button-cc { margin-left: 5px; }
 #stripe-payment-form-cc a { display: inline; font-size: 11px; text-decoration: underline; }
 #stripe-payment-form .stripe-submit-button, #stripe-payment-form-cc .stripe-submit-button-cc {
@@ -42,7 +42,7 @@ img.enable { opacity: 1; }
 	border-radius: 3px;
 	font-weight:bold;
 	color:#000;
-	background:url(../../themes/default/img/bg_bt.gif) repeat-x 0 0 #f4b61b;
+	background:#f4b61b;
 	cursor: pointer;
 }
 #stripe-payment-form .stripe-submit-button:hover, #stripe-payment-form-cc .stripe-submit-button-cc:hover {
@@ -73,3 +73,28 @@ div.stripe-card-deleted {
 a#stripe_error { display: none; }
 #stripe-payment-form input, #stripe-payment-form select { margin-left: 0; }
 #stripe-replace-card, #stripe-delete-card { border: none; padding: 0; cursor: pointer; }
+
+
+.stripe-payment-16 {
+	display: block;
+	border: 1px solid #d6d4d4;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	
+	line-height: 23px;
+	color: #333;
+	
+	padding: 33px 40px 34px 99px;
+	letter-spacing: -1px;
+	position: relative;
+}
+
+.stripe-payment-15 {
+	border: 1px solid #595A5E; 
+	padding: 0.6em; 
+	margin-left: 0.7em;
+}
+#uniform-stripe_save_token {
+	display: inline-block;
+}
