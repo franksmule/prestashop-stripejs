@@ -371,7 +371,7 @@ class StripeJs extends PaymentModule
 			else
 				$this->smarty->assign('order_pending', false);
 
-		return $this->display(__FILE__, 'order-confirmation.tpl');
+		return $this->display(__FILE__, './views/templates/hook/order-confirmation.tpl');
 
 	}
 
