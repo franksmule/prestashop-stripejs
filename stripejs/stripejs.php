@@ -273,13 +273,20 @@ class StripeJs extends PaymentModule
 			{
 				$stripe_refunded += ($stripe_refund_detail['status'] == 'paid' ? $stripe_refund_detail['amount'] : 0);
 				$output_refund .= '<tr'.($stripe_refund_detail['status'] != 'paid' ? ' style="background: #FFBBAA;"': '').'><td>'.
-				Tools::safeOutput($stripe_refund_detail['date_add']).'</td><td style="text-align: right;">'.Tools::displayPrice($stripe_refund_detail['amount']).
+				Tools::safeOutput($stripe_refund_detail['date_add']).'</td><td style="">'.Tools::displayPrice($stripe_refund_detail['amount']).
 				'</td><td>'.($stripe_refund_detail['status'] == 'paid' ? $this->l('Processed') : $this->l('Error')).'</td></tr>';
 			}
-
+			$currency = $this->context->currency;
+			$c_char = $currency->sign;
 			$output = '
 			<script type="text/javascript">
 				$(document).ready(function() {
+					var appendEl;
+					if ($(\'select[name=id_order_state]\').is("visible")) {
+						appendEl = $(\'select[name=id_order_state]\').parents(\'fieldset\');
+					} else {
+						appendEl = $("#status");
+					}
 					$(\'<fieldset'.(_PS_VERSION_ < 1.5 ? ' style="width: 400px;"' : '').'><legend><img src="../img/admin/money.gif" alt="" />'.$this->l('Stripe Payment Details').'</legend>';
 
 			if (isset($stripe_transaction_details['id_transaction']))
@@ -298,10 +305,10 @@ class StripeJs extends PaymentModule
 			((empty($this->_errors['stripe_refund_error']) &&  Tools::getIsset('id_transaction_stripe')) ? '<div class="conf confirmation">'.$this->l('Your refund was successfully processed').'</div>' : '').
 			(!empty($this->_errors['stripe_refund_error']) ? '<span style="color: #CC0000; font-weight: bold;">'.$this->l('Error:').' '.Tools::safeOutput($this->_errors['stripe_refund_error']).'</span><br /><br />' : '').
 			$this->l('Already refunded:').' <b>'.Tools::displayPrice($stripe_refunded).'</b><br /><br />'.($stripe_refunded ? '<table class="table" cellpadding="0" cellspacing="0" style="font-size: 12px;"><tr><th>'.$this->l('Date').'</th><th>'.$this->l('Amount refunded').'</th><th>'.$this->l('Status').'</th></tr>'.$output_refund.'</table><br />' : '').
-			($stripe_transaction_details['amount'] > $stripe_refunded ? '<form action="" method="post">'.$this->l('Refund:').' $ <input type="text" value="'.number_format($stripe_transaction_details['amount'] - $stripe_refunded, 2, '.', '').
-			'" name="stripe_amount_to_refund" style="text-align: right; width: 45px;" /> <input type="hidden" name="id_transaction_stripe" value="'.
+			($stripe_transaction_details['amount'] > $stripe_refunded ? '<form action="" method="post">'.$this->l('Refund:'). ' ' . $c_char .' <input type="text" value="'.number_format($stripe_transaction_details['amount'] - $stripe_refunded, 2, '.', '').
+			'" name="stripe_amount_to_refund" style="display: inline-block; width: 60px;" /> <input type="hidden" name="id_transaction_stripe" value="'.
 			Tools::safeOutput($stripe_transaction_details['id_transaction']).'" /><input type="submit" class="button" onclick="return confirm(\\\''.addslashes($this->l('Do you want to proceed to this refund?')).'\\\');" name="SubmitStripeRefund" value="'.
-			$this->l('Process Refund').'" /></form>' : '').'</fieldset><br />\').insertBefore($(\'select[name=id_order_state]\').parent().parent().find(\'fieldset\').first());
+			$this->l('Process Refund').'" /></form>' : '').'</fieldset><br />\').appendTo(appendEl);
 				});
 			</script>';
 
