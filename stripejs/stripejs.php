@@ -31,7 +31,7 @@ class StripeJs extends PaymentModule
 	{
 		$this->name = 'stripejs';
 		$this->tab = 'payments_gateways';
-		$this->version = '0.9.9';
+		$this->version = '1.0.0Beta';
 		$this->author = 'PrestaShop + Ollie McFarlane';
 		$this->need_instance = 0;
 		$this->currencies = true;
