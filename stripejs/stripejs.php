@@ -282,8 +282,8 @@ class StripeJs extends PaymentModule
 			<script type="text/javascript">
 				$(document).ready(function() {
 					var appendEl;
-					if ($(\'select[name=id_order_state]\').is("visible")) {
-						appendEl = $(\'select[name=id_order_state]\').parents(\'fieldset\');
+					if ($(\'select[name=id_order_state]\').is(":visible")) {
+						appendEl = $(\'select[name=id_order_state]\').parents(\'form\').after($(\'<div/>\'));
 					} else {
 						appendEl = $("#status");
 					}
@@ -648,20 +648,35 @@ class StripeJs extends PaymentModule
 			<script type="text/javascript" src="'.__PS_BASE_URI__.'js/jquery/jquery.fancybox-1.3.4.js"></script>
 		  	<link type="text/css" rel="stylesheet" href="'.__PS_BASE_URI__.'css/jquery.fancybox-1.3.4.css" />';
 
-		/* Update Configuration Values when settings are updated */
-		if (Tools::isSubmit('SubmitStripe'))
-		{
-			$configuration_values = array('STRIPE_MODE' => Tools::getValue('stripe_mode'), 'STRIPE_SAVE_TOKENS' =>Tools::getValue('stripe_save_tokens'),
-			'STRIPE_SAVE_TOKENS_ASK' =>Tools::getValue('stripe_save_tokens_ask'), 'STRIPE_PUBLIC_KEY_TEST' => Tools::getValue('stripe_public_key_test'),
-			'STRIPE_PUBLIC_KEY_LIVE' => Tools::getValue('stripe_public_key_live'), 'STRIPE_PRIVATE_KEY_TEST' => Tools::getValue('stripe_private_key_test'),
-			'STRIPE_PRIVATE_KEY_LIVE' => Tools::getValue('stripe_private_key_live'), 'STRIPE_PENDING_ORDER_STATUS' => (int)Tools::getValue('stripe_pending_status'),
-			'STRIPE_PAYMENT_ORDER_STATUS' => (int)Tools::getValue('stripe_payment_status'), 'STRIPE_CHARGEBACKS_ORDER_STATUS' => (int)Tools::getValue('stripe_chargebacks_status'));
-
-			foreach ($configuration_values as $configuration_key => $configuration_value)
-				Configuration::updateValue($configuration_key, $configuration_value);
-		}
 
 		$requirements = $this->checkRequirements();
+		$errors = array();
+		/* Update Configuration Values when settings are updated */
+		if (Tools::isSubmit('SubmitStripe'))
+		{	
+			if (strpos(Tools::getValue('stripe_public_key_test'), "sk") !== false || strpos(Tools::getValue('stripe_public_key_live'), "sk") !== false ) {
+				$errors[] = "You've entered your private key in the public key field!";
+			}
+			if (empty($errors)) {
+				$configuration_values = array(
+					'STRIPE_MODE' => Tools::getValue('stripe_mode'), 
+					'STRIPE_SAVE_TOKENS' =>Tools::getValue('stripe_save_tokens'),
+					'STRIPE_SAVE_TOKENS_ASK' =>Tools::getValue('stripe_save_tokens_ask'), 
+					'STRIPE_PUBLIC_KEY_TEST' => trim(Tools::getValue('stripe_public_key_test')),
+					'STRIPE_PUBLIC_KEY_LIVE' => trim(Tools::getValue('stripe_public_key_live')), 
+					'STRIPE_PRIVATE_KEY_TEST' => trim(Tools::getValue('stripe_private_key_test')),
+					'STRIPE_PRIVATE_KEY_LIVE' => trim(Tools::getValue('stripe_private_key_live')), 
+					'STRIPE_PENDING_ORDER_STATUS' => (int)Tools::getValue('stripe_pending_status'),
+					'STRIPE_PAYMENT_ORDER_STATUS' => (int)Tools::getValue('stripe_payment_status'), 
+					'STRIPE_CHARGEBACKS_ORDER_STATUS' => (int)Tools::getValue('stripe_chargebacks_status')
+				);
+
+				foreach ($configuration_values as $configuration_key => $configuration_value)
+					Configuration::updateValue($configuration_key, $configuration_value);
+			}
+		}
+
+		
 
 		$output .= '
 		<script type="text/javascript">
@@ -727,6 +742,27 @@ class StripeJs extends PaymentModule
 				</table>
 			</fieldset>
 		<br />';
+
+		if (!empty($errors)) {
+			$output .= '
+			<fieldset>
+				<legend>Errors</legend>
+				<table cellspacing="0" cellpadding="0" class="stripe-technical">
+						<tbody>
+						';
+					foreach ($errors as $error) {
+							$output .= '
+						<tr>
+							<td><img src="../img/admin/forbbiden.gif" alt=""></td>
+							<td>'. $error .'</td>
+						</tr>';
+					}
+				$output .= '		
+				</tbody></table>
+			</fieldset>';
+		}
+
+
 
 		/* If 1.4 and no backward, then leave */
 		if (!$this->backward)
