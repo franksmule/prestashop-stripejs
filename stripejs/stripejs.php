@@ -31,7 +31,7 @@ class StripeJs extends PaymentModule
 	{
 		$this->name = 'stripejs';
 		$this->tab = 'payments_gateways';
-		$this->version = '1.0.0Beta';
+		$this->version = '1.0.1Beta';
 		$this->author = 'PrestaShop + Ollie McFarlane';
 		$this->need_instance = 0;
 		$this->currencies = true;
@@ -171,6 +171,7 @@ class StripeJs extends PaymentModule
 
 		return '
 		<script type="text/javascript" src="https://js.stripe.com/v1/"></script>
+		<script type="text/javascript" src="'. $this->_path .'js/stripe-prestashop.js"></script>
 		<script type="text/javascript">
 			var stripe_public_key = \''.addslashes(Configuration::get('STRIPE_MODE') ? Configuration::get('STRIPE_PUBLIC_KEY_LIVE') : Configuration::get('STRIPE_PUBLIC_KEY_TEST')).'\';
 		</script>';
@@ -215,6 +216,8 @@ class StripeJs extends PaymentModule
 			$this->smarty->assign('stripe_error', $this->context->cookie->stripe_error);
 			$this->context->cookie->__set('stripe_error', null);
 		}
+
+		$this->smarty->assign('validation_url', (Configuration::get('PS_SSL_ENABLED') ? 'https' : 'http').'://'.$_SERVER['HTTP_HOST'].__PS_BASE_URI__.'index.php?process=validation&fc=module&module=stripejs&controller=default');
 
 
 		$this->smarty->assign('stripe_ps_version', _PS_VERSION_);

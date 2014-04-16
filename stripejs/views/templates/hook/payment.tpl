@@ -24,12 +24,12 @@
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
-<script type="text/javascript" src="{$module_dir|escape:htmlall:'UTF-8'}js/stripe-prestashop.js"></script>
+
 <div class="payment_module {if $stripe_ps_version < '1.5'}stripe-payment-15{/if}{if $stripe_ps_version > '1.5'}stripe-payment-16{/if}">
 	<h3 class="stripe_title">{l s='Pay by credit / debit card' mod='stripejs'} <img alt="" src="{$module_dir|escape:htmlall:'UTF-8'}img/secure-icon.png" /></h3>
 	{* This form will be displayed only if a previous credit card was saved *}
 	{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)}
-	<form action="{$module_dir|escape:htmlall:'UTF-8'}validation.php" method="POST" id="stripe-payment-form-cc">
+	<form action="{$validation_url|escape:htmlall:'UTF-8'}" method="POST" id="stripe-payment-form-cc">
 		<p>{l s='Pay with my saved Credit card (ending in' mod='stripejs'} {$stripe_credit_card|escape:html:'UTF-8'}{l s=')' mod='stripejs'}
 		<input type="hidden" name="stripe_save_token" value="1" />
 		<input type="hidden" name="stripeToken" value="0" />
@@ -39,7 +39,7 @@
 	{/if}
 	{* Classic Credit card form *}
 	<div id="stripe-ajax-loader"><img src="{$module_dir|escape:htmlall:'UTF-8'}img/ajax-loader.gif" alt="" /> {l s='Transaction in progress, please wait.' mod='stripejs'}</div>
-	<form action="{$module_dir|escape:htmlall:'UTF-8'}validation.php" method="POST" id="stripe-payment-form"{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)} style="display: none;"{/if}>
+	<form action="{$validation_url|escape:htmlall:'UTF-8'}" method="POST" id="stripe-payment-form"{if isset($stripe_save_tokens_ask) && $stripe_save_tokens_ask && isset($stripe_credit_card)} style="display: none;"{/if}>
 		<div class="stripe-payment-errors">{if isset($stripe_error)}{$stripe_error|escape:htmlall:'UTF-8'}{/if}</div>
 
 			<a name="stripe_error" style="display:none"></a>
