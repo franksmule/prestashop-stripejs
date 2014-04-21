@@ -31,7 +31,7 @@ class StripeJs extends PaymentModule
 	{
 		$this->name = 'stripejs';
 		$this->tab = 'payments_gateways';
-		$this->version = '1.0.1Beta';
+		$this->version = '1.0.2Beta';
 		$this->author = 'PrestaShop + Ollie McFarlane';
 		$this->need_instance = 0;
 		$this->currencies = true;
@@ -865,7 +865,7 @@ class StripeJs extends PaymentModule
 				<legend><img src="'.$this->_path.'img/checks-icon.gif" alt="" />'.$this->l('Webhooks').'</legend>
 				'.$this->l('In order to receive chargeback information from Stripe, you must provide a Webhook link in Stripe\'s admin panel.').'<br />
 				'.$this->l('To get started, please visit Stripe and setup the following Webhook:').'<br /><br />
-			  <strong>'.(Configuration::get('PS_SSL_ENABLED') ? 'https://' : 'http://').$_SERVER['HTTP_HOST'].__PS_BASE_URI__.'modules/stripejs/webhooks.php?token='.Tools::safeOutput(Configuration::get('STRIPE_WEBHOOK_TOKEN')).'</strong>
+			  <strong>'.(Configuration::get('PS_SSL_ENABLED') ? 'https://' : 'http://').$_SERVER['HTTP_HOST'].__PS_BASE_URI__.'index.php?process=webhook&fc=module&module=stripejs&controller=default&token='.Tools::safeOutput(Configuration::get('STRIPE_WEBHOOK_TOKEN')).'</strong>
 			</fieldset>
 
 		</div>

@@ -56,9 +56,8 @@ class StripeJsDefaultModuleFrontController extends ModuleFrontController
 					{
 						/* To double-check and for more security, we retrieve the original event directly from Stripe */
 						$event = Stripe_Event::retrieve($event_json->id);
-
 						/* We are only handling chargebacks, other events are ignored */
-						if ($event->type == 'charge.disputed')
+						if ($event->type == 'charge.dispute.created')
 						{
 							$id_order = (int)Db::getInstance()->getValue('SELECT id_order FROM '._DB_PREFIX_.'stripe_transaction WHERE id_stripe_transaction = \''.pSQL($event->id).'\' AND `charge_back` = 0');
 							if ($id_order)
@@ -86,7 +85,7 @@ class StripeJsDefaultModuleFrontController extends ModuleFrontController
 					}
 					catch (Exception $e)
 					{
-						header('HTTP/1.1 501 NOT SUPPORTED');
+						header('HTTP/1.1 200 OK');
 						exit;
 					}
 					header('HTTP/1.1 200 OK');
@@ -94,7 +93,7 @@ class StripeJsDefaultModuleFrontController extends ModuleFrontController
 				}
 			}
 		}
-		header('HTTP/1.1 501 NOT SUPPORTED');
+		header('HTTP/1.1 200 OK');
 		exit;
 	}
 }
