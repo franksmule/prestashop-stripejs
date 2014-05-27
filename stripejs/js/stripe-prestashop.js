@@ -58,9 +58,11 @@ $(document).ready(function() {
 
 	$('#stripe-payment-form').submit(function(event) {
 
+		var month = ($('.stripe-card-expiry-month option:selected').val()); // this is the easiest way to check selected in mobile browsers and this will work in desktop as well
+		var year  = ($('.stripe-card-expiry-year option:selected').val()); // this is the easiest way to check selected in mobile browsers and this will work in desktop as well
 		if (!Stripe.validateCardNumber($('.stripe-card-number').val()))
 			$('.stripe-payment-errors').text($('#stripe-wrong-card').text() + ' ' + $('#stripe-please-fix').text());
-		else if (!Stripe.validateExpiry($('.stripe-card-expiry-month').val(), $('.stripe-card-expiry-year').val()))
+		else if (!Stripe.validateExpiry(month, year))
 			$('.stripe-payment-errors').text($('#stripe-wrong-expiry').text() + ' ' + $('#stripe-please-fix').text());
 		else if (!Stripe.validateCVC($('.stripe-card-cvc').val()))
 			$('.stripe-payment-errors').text($('#stripe-wrong-cvc').text() + ' ' + $('#stripe-please-fix').text());
@@ -74,8 +76,8 @@ $(document).ready(function() {
 			stripe_token_params = { 
 				number: $('.stripe-card-number').val(),
 				cvc: $('.stripe-card-cvc').val(),
-				exp_month: $('.stripe-card-expiry-month').val(),
-				exp_year: $('.stripe-card-expiry-year').val(),
+				exp_month: month,
+				exp_year: year,
 			};
 			
 			/* Check if the billing address element are set and add them to the Token */
