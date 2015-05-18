@@ -18,6 +18,7 @@
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *  Further Updates by @olliemcfarlane
+*  Patched by @ryanteck
 */
 
 if (!defined('_PS_VERSION_'))
@@ -31,7 +32,7 @@ class StripeJs extends PaymentModule
 	{
 		$this->name = 'stripejs';
 		$this->tab = 'payments_gateways';
-		$this->version = '1.0.2Beta';
+		$this->version = '1.0.3Beta';
 		$this->author = 'PrestaShop + Ollie McFarlane';
 		$this->need_instance = 0;
 		$this->currencies = true;
@@ -199,7 +200,7 @@ class StripeJs extends PaymentModule
 			if ($customer_credit_card)
 				$this->smarty->assign('stripe_credit_card', (int)$customer_credit_card);
 		}
-		
+
 		/* If the address check has been enabled by the merchant, we will transmitt the billing address to Stripe */
 		if (isset($this->context->cart->id_address_invoice))
 		{
@@ -211,7 +212,7 @@ class StripeJs extends PaymentModule
 					$billing_address->state = $state->iso_code;
 			}
 		}
-		
+
 		if (!empty($this->context->cookie->stripe_error)) {
 			$this->smarty->assign('stripe_error', $this->context->cookie->stripe_error);
 			$this->context->cookie->__set('stripe_error', null);
@@ -357,7 +358,7 @@ class StripeJs extends PaymentModule
 		\''.(float)$amount.'\', \''.(!isset($this->_errors['stripe_refund_error']) ? 'paid' : 'unpaid').'\', \''.pSQL($result_json->currency).'\',
 		\'\', \'\', 0, 0, \''.(Configuration::get('STRIPE_MODE') ? 'live' : 'test').'\', NOW())');
 	}
-	
+
 	/**
 	 * Display a confirmation message after an order has been placed
 	 *
@@ -367,7 +368,7 @@ class StripeJs extends PaymentModule
 	{
 		if (!isset($params['objOrder']) || ($params['objOrder']->module != $this->name))
 			return false;
-		
+
 		if ($params['objOrder'] && Validate::isLoadedObject($params['objOrder']) && isset($params['objOrder']->valid))
 
 			$this->smarty->assign('stripe_order', array('reference' => isset($params['objOrder']->reference) ? $params['objOrder']->reference : '#'.sprintf('%06d', $params['objOrder']->id), 'valid' => $params['objOrder']->valid));
@@ -473,13 +474,13 @@ class StripeJs extends PaymentModule
 
 		// catch the stripe error the correct way.
 		} catch(Stripe_CardError $e) {
-			$body = $e->getJsonBody(); 
-			$err = $body['error']; 
+			$body = $e->getJsonBody();
+			$err = $body['error'];
 
-			//$type = $err['type']; 
-			$message = $err['message']; 
-			//$code = $err['code']; 
-			//$charge = $err['charge']; 
+			//$type = $err['type'];
+			$message = $err['message'];
+			//$code = $err['code'];
+			//$charge = $err['charge'];
 
 			if (class_exists('Logger'))
 				Logger::addLog($this->l('Stripe - Payment transaction failed').' '.$message, 1, null, 'Cart', (int)$this->context->cart->id, true);
@@ -510,6 +511,12 @@ class StripeJs extends PaymentModule
 			if (!isset($result_json->fee))
 				$result_json->fee = 0;
 
+			ob_start();
+			var_dump($result_json);
+			$contents = ob_get_contents();
+			ob_end_clean();
+
+			file_put_contents("/var/www/prestashop/public_html/modules/stripejs/error.log",$contents);
 			$order_status = (int)Configuration::get('STRIPE_PAYMENT_ORDER_STATUS');
 			$message = $this->l('Stripe Transaction Details:')."\n\n".
 			$this->l('Stripe Transaction ID:').' '.$result_json->id."\n".
@@ -517,8 +524,8 @@ class StripeJs extends PaymentModule
 			$this->l('Status:').' '.($result_json->paid == 'true' ? $this->l('Paid') : $this->l('Unpaid'))."\n".
 			$this->l('Processed on:').' '.strftime('%Y-%m-%d %H:%M:%S', $result_json->created)."\n".
 			$this->l('Currency:').' '. Tools::strtoupper($result_json->currency)."\n".
-			$this->l('Credit card:').' '.$result_json->card->type.' ('.$this->l('Exp.:').' '.$result_json->card->exp_month.'/'.$result_json->card->exp_year.')'."\n".
-			$this->l('Last 4 digits:').' '.sprintf('%04d', $result_json->card->last4).' ('.$this->l('CVC Check:').' '.($result_json->card->cvc_check == 'pass' ? $this->l('OK') : $this->l('NOT OK')).')'."\n".
+			$this->l('Credit card:').' '.$result_json->source->brand.' ('.$this->l('Exp.:').' '.$result_json->source->exp_month.'/'.$result_json->source->exp_year.')'."\n".
+			$this->l('Last 4 digits:').' '.sprintf('%04d', $result_json->source->last4).' ('.$this->l('CVC Check:').' '.($result_json->source->cvc_check == 'pass' ? $this->l('OK') : $this->l('NOT OK')).')'."\n".
 			$this->l('Processing Fee:').' '.($result_json->fee * 0.01)."\n".
 			$this->l('Mode:').' '.($result_json->livemode == 'true' ? $this->l('Live') : $this->l('Test'))."\n";
 
@@ -568,8 +575,8 @@ class StripeJs extends PaymentModule
 			id_transaction, amount, status, currency, cc_type, cc_exp, cc_last_digits, cvc_check, fee, mode, date_add)
 			VALUES (\'payment\', '.(isset($stripe_customer['id_stripe_customer']) ? (int)$stripe_customer['id_stripe_customer'] : 0).', '.(int)$this->context->cart->id.', '.(int)$this->currentOrder.', \''.pSQL($result_json->id).'\',
 			\''.($result_json->amount * 0.01).'\', \''.($result_json->paid == 'true' ? 'paid' : 'unpaid').'\', \''.pSQL($result_json->currency).'\',
-			\''.pSQL($result_json->card->type).'\', \''.(int)$result_json->card->exp_month.'/'.(int)$result_json->card->exp_year.'\', '.(int)$result_json->card->last4.',
-			'.($result_json->card->cvc_check == 'pass' ? 1 : 0).', \''.($result_json->fee * 0.01).'\', \''.($result_json->livemode == 'true' ? 'live' : 'test').'\', NOW())');
+			\''.pSQL($result_json->source->brand).'\', \''.(int)$result_json->source->exp_month.'/'.(int)$result_json->source->exp_year.'\', '.(int)$result_json->source->last4.',
+			'.($result_json->source->cvc_check == 'pass' ? 1 : 0).', \''.($result_json->fee * 0.01).'\', \''.($result_json->livemode == 'true' ? 'live' : 'test').'\', NOW())');
 
 		/* Redirect the user to the order confirmation page / history */
 		if (_PS_VERSION_ < 1.5)
@@ -656,21 +663,21 @@ class StripeJs extends PaymentModule
 		$errors = array();
 		/* Update Configuration Values when settings are updated */
 		if (Tools::isSubmit('SubmitStripe'))
-		{	
+		{
 			if (strpos(Tools::getValue('stripe_public_key_test'), "sk") !== false || strpos(Tools::getValue('stripe_public_key_live'), "sk") !== false ) {
 				$errors[] = "You've entered your private key in the public key field!";
 			}
 			if (empty($errors)) {
 				$configuration_values = array(
-					'STRIPE_MODE' => Tools::getValue('stripe_mode'), 
+					'STRIPE_MODE' => Tools::getValue('stripe_mode'),
 					'STRIPE_SAVE_TOKENS' =>Tools::getValue('stripe_save_tokens'),
-					'STRIPE_SAVE_TOKENS_ASK' =>Tools::getValue('stripe_save_tokens_ask'), 
+					'STRIPE_SAVE_TOKENS_ASK' =>Tools::getValue('stripe_save_tokens_ask'),
 					'STRIPE_PUBLIC_KEY_TEST' => trim(Tools::getValue('stripe_public_key_test')),
-					'STRIPE_PUBLIC_KEY_LIVE' => trim(Tools::getValue('stripe_public_key_live')), 
+					'STRIPE_PUBLIC_KEY_LIVE' => trim(Tools::getValue('stripe_public_key_live')),
 					'STRIPE_PRIVATE_KEY_TEST' => trim(Tools::getValue('stripe_private_key_test')),
-					'STRIPE_PRIVATE_KEY_LIVE' => trim(Tools::getValue('stripe_private_key_live')), 
+					'STRIPE_PRIVATE_KEY_LIVE' => trim(Tools::getValue('stripe_private_key_live')),
 					'STRIPE_PENDING_ORDER_STATUS' => (int)Tools::getValue('stripe_pending_status'),
-					'STRIPE_PAYMENT_ORDER_STATUS' => (int)Tools::getValue('stripe_payment_status'), 
+					'STRIPE_PAYMENT_ORDER_STATUS' => (int)Tools::getValue('stripe_payment_status'),
 					'STRIPE_CHARGEBACKS_ORDER_STATUS' => (int)Tools::getValue('stripe_chargebacks_status')
 				);
 
@@ -679,7 +686,7 @@ class StripeJs extends PaymentModule
 			}
 		}
 
-		
+
 
 		$output .= '
 		<script type="text/javascript">
@@ -760,7 +767,7 @@ class StripeJs extends PaymentModule
 							<td>'. $error .'</td>
 						</tr>';
 					}
-				$output .= '		
+				$output .= '
 				</tbody></table>
 			</fieldset>';
 		}
